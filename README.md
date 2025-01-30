@@ -85,7 +85,7 @@ This project covers **data visualization and analysis** using **Tableau and R**,
 
 ---
 
-### Ppre-attentive Attributes
+### Pre-attentive Attributes
 - Pre-attentive attributes are stand out visual patterns/objects that viewers can notice pretty much instantly (200ms after exposure to the visual) without needed to make an intentional observation effort.
 - These attributes can be considered as a powerful visualization technique that if implemented correctly, it can strongly capture the audience's attention instantly; and efficiently convey the data message without much of an explanation.
 - Several features that are commonly used for pre-attentive attributes are color, tilt, size, shape, proximity, and shadow direction. These attributes can be established by using combinations of these features, or just by a single feature itself. The goal is to ensure pre-attentive object standing-out from the rest of the visualization, also represents meaningful data. The implementation approach must be properly decided to get the best efficiency affect, yet not over-powering to viewer's eye.
