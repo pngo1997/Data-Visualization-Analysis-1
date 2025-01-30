@@ -1,0 +1,195 @@
+---
+title: "Data Visualization & Analysis Practice 1"
+author: "Mai Ngo"
+date: "2024-04-11"
+output: pdf_document
+---
+
+Import libraries.
+```{r}
+library(ggplot2)
+library(treemapify)
+library(dplyr)
+library(colorspace)
+library(scales)
+library(ggrepel)
+```
+
+## Question 1.
+### Dataset description: 
+The data covers stock market trading for the Intel corporation in 1998. Each row is a day.
+Date, Trading Day (integer day number, including skips)
+Open (price at market open)
+High (highest price of day)
+Low (lowest price of day)
+Close (price at market close)
+Volume (shares traded)
+Adj. Close (adjusted closing price, meaning accounting for stock splits, not use)
+
+### Read explore data.  
+Set Working Directory.  
+```{r}
+setwd("C:/Users/maimu/OneDrive/Documents/DePaul/DSC 465")
+```
+
+Read data sets. Get basic information about the Intel dataset.
+Note: There is no missing data.
+```{r}
+intelData <- read.csv(file="Intel-1998.csv", header=TRUE, sep=",")
+print("Intel Data:")
+print(paste("Missing values count:", sum(is.na(intelData))))
+print(paste("Rows count:", dim(intelData)[1]))
+print(paste("Columns count:", dim(intelData)[2]))
+
+print("Data type count:")
+intel_dataTypes <- table(sapply(intelData, class))
+print(paste(names(intel_dataTypes), ":", intel_dataTypes, sep = " "))
+```
+
+### Intel Data.
+```{r}
+#Convert to Date data type.
+intelData$Date <- as.Date(intelData$Date, format = "%m/%d/%Y")
+head(intelData)
+```
+
+```{r}
+summary(intelData)
+```
+
+### a) Graph the closing price vs. the date with an ordinary line graph. 
+* Note: Adding highest/lowest Closing Price with corresponding date.
+* I want to learn more so I just thought to graph extra information.
+* Overall, Intel closing stock price increased over the year of 1998. There were fluctuations but not significant; end of year closing price hit the highest of $125.
+```{r}
+#Highest and lowest closing prices with corresponding dates.
+maxClose <- max(intelData$Close)
+minClose <- min(intelData$Close)
+date_maxClose <- intelData$Date[which.max(intelData$Close)]
+date_minClose <- intelData$Date[which.min(intelData$Close)]
+padding <- 0.02 * maxClose
+
+ggplot(intelData, aes(x=Date, y=Close, group=1)) +
+  geom_line(linewidth=0.7) +
+  geom_point(data = data.frame(Date = c(date_minClose, date_maxClose),
+                               Close = c(minClose, maxClose)), color = "red", size = 2) +
+  geom_text(data = data.frame(Date = c(date_minClose, date_maxClose), Close = c(minClose, maxClose)),
+            aes(label = paste("Date:", Date, "\nClose Price:", Close)), 
+            hjust = 1, nudge_x= -0.5, nudge_y = 0.6, color ="red") + 
+  ggtitle("Intel Stock Price Data - 1998: Closing Price vs. Date") +
+  labs(x="Date", y="Closing Price") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.4))+
+  ylim(minClose - padding, maxClose + padding)
+```
+
+### b) Graph the Volume vs. the exact Date as in the last part with a bar graph.
+*Throughout the year, share volumes are pretty consistent. Noticeably, there is a significant increment in trading shares at the beginning of March, 1998. 
+```{r}
+#Highest shares traded with corresponding dates.
+maxShare <- max(intelData$Volume)
+date_maxShare <- intelData$Date[which.max(intelData$Volume)]
+padding <- 0.02 * maxShare
+
+ggplot(intelData, aes(x=Date, y=Volume)) +
+  geom_bar(stat="identity", fill="blue4") +
+  geom_text(data = data.frame(Date = c(date_maxShare), Volume = c(maxShare)),
+            aes(label = paste("Date:", Date, "\nShare Volume:", Volume)), vjust = 0.8, hjust = -0.05, color ="black") + 
+  ggtitle("Intel Stock Price Data - 1998: Volume vs. Date") +
+  labs(x="Date", y="Volume (shares traded)") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+```
+
+### c) Create a scatterplot that graphs the Volume on the x-axis and the daily price range on the y-axis. You will need to create an additional column that contains the "range" of the prices for the day as the difference between the fields High and Low. Given Range = High – Low. In R you can do it by making a new column equal to the result from subtracting the two columns. 
+
+#Create new column.
+```{r}
+intelData$Range <-intelData$High - intelData$Low
+summary(intelData$Range)
+```
+
+* The average for daily price range is $2.724. Majority of dates are moderate share volume with price range around the mean value. Some noticeable occasions where higher price range still corresponds with common share volume. While the occasion with highest shares volume corresponds with daily price range of approximately 2.5 dollars, around the mean value.
+```{r}
+ggplot(intelData, aes(x=Volume, y=Range)) +
+  geom_point(color = "darkgreen") +  
+  ggtitle("Intel Stock Price Data - 1998: Volume vs. Daily Price Range") +
+  labs(x="Volume (shares traded)", y="Price Range") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5))  
+```
+
+
+## Question 5.
+### Create dataset
+```{r}
+cellPlans = data.frame(
+ c("ATT", "Sprint", "Verizon", "ATT", "Sprint",
+"Verizon", "ATT", "Sprint", "Verizon", "ATT",
+"Verizon", "Sprint", "Verizon", "ATT",
+"Verizon", "Sprint", "ATT", "ATT", "Sprint"),
+ c(1, 1, 2, 3, 3, 4, 6, 6, 8, 10, 12, 12, 16, 16,
+24, 24, 25, 30, 40),
+ c(30, 20, 35, 40, 30, 50, 60, 45, 70, 80, 80, 60,
+90, 90, 110, 80, 110, 135, 100))
+names(cellPlans) = c("Company", "DataGB", "Price")
+```
+
+```{r}
+head(cellPlans)
+```
+
+```{r}
+summary(cellPlans)
+```
+
+### First graph: Customer perspective. 
+
+* I want to create a visualization for customers to make decision on purchasing phone plan.
+* Therefore, I decided to create a tree map with phone plan count per company represents by the color area. Then within each area/company, we have subgroup tree map represents different Data GB and corresponding Price plan.
+* Darker color aims for higher prices, bigger area aims for more GB (proportionally coded). The graph also show phone plan options and information. 
+* With this, by looking at the visualization, customer will pay more attention to bigger area, less clutter. For example, looking at the graph we instantly notice highest GB phone plan of each company and perhaps make psychological decision on getting more expensive phone plans thus benefit the company. 
+
+```{r}
+m <- length(unique(cellPlans$Company))
+
+#Now calculate the colors for each data point
+cellPlans2 <- cellPlans %>%
+  mutate(index = as.numeric(factor(Company))- 1) %>%
+  group_by(index) %>%
+  mutate(
+    maxGB = max(DataGB),
+    color = gradient_n_pal(
+      sequential_hcl(6, h = 360 * index[1]/m, c = c(45, 20),
+              l = c(30, 80), power = .5))(1 - DataGB/maxGB))
+
+ggplot(cellPlans2, aes(area = DataGB, fill = color, label=Price, subgroup=Company)) +
+  geom_treemap() +
+  geom_treemap_subgroup_border(colour="white") +
+  geom_treemap_text(aes(label = paste(Price, "\n", DataGB, "GB")),
+                    colour = "white", place = "centre", grow = F, reflow=T, size = 15) +
+  geom_treemap_subgroup_text(place = "centre", grow = T, alpha = 0.2,
+                             colour = "#FAFAFA", min.size = 5) +
+  scale_fill_identity() +
+  ggtitle("Phone Plan Service Providers") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 16))
+```
+
+### Second graph: Company perspective.
+
+* I want to create a visualization to comparing phone plans across three companies.
+* Based on price point, overall, Verizon and AT&T are pretty much providing the same phone plans, similar price points and GB. AT&T is more expensive.
+* On the other hand, we can see the significant difference in Sprint, their most expensive phone plan is cheaper compared to the other two carriers, also give the most GB. They also have the cheapest price for smallest GB. From pricing perspective, Sprint would be the best option.
+* Line curve for Sprint phone plan also show that the more customers pay, the more GB they will get proportionally. While flatter line curves of AT&T and Verizon show not that much of a proportional change compared to Sprint. Perhaps the question lies in the GB service quality.
+```{r}
+ggplot(cellPlans, aes(x = Price, y = DataGB, group = Company)) +
+  geom_line(aes(color = Company)) +
+  geom_point(aes(color = Company)) +
+  theme_classic() +
+  geom_text_repel(aes(label = DataGB, color = Company), 
+                  nudge_x = 0.7, nudge_y = -0.9, 
+                  box.padding = unit(0.2, "lines")) +
+  scale_color_brewer(palette = "Set1") +
+  ggtitle("Phone Plan Data and Price Provided by Companies") +
+  labs(x = "Price", y = "Data Provided (GB)") + 
+  theme(plot.title = element_text(face = "bold", hjust = 0.5)) +
+  theme(legend.position = "top") +
+  scale_x_continuous(breaks = seq(0, 140, by = 10), labels = seq(0, 140, by = 10))
+```
